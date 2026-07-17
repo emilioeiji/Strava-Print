@@ -19,6 +19,9 @@ def main() -> None:
     parser.add_argument("--location", default="")
     parser.add_argument("--country", default="")
     parser.add_argument("--photo")
+    parser.add_argument("--dem", help="GeoTIFF DEM usado pelo modo terrain")
+    parser.add_argument("--terrain-height", type=float, default=8.0)
+    parser.add_argument("--terrain-resolution", type=int, default=96)
     parser.add_argument("--units", choices=["metric", "imperial"], default="metric")
     parser.add_argument("--output", required=True)
     parser.add_argument("--stem", default="activity")
@@ -34,6 +37,11 @@ def main() -> None:
     )
     if args.photo:
         project.photo.path = args.photo
+    if args.dem:
+        project.model_3d.mode = "terrain"
+        project.model_3d.dem_path = args.dem
+        project.model_3d.terrain_height_mm = args.terrain_height
+        project.model_3d.terrain_resolution = args.terrain_resolution
     files = export_all(activity, project, args.output, args.stem)
     print("Arquivos exportados:")
     for key, value in files.items():

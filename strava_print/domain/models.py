@@ -65,6 +65,9 @@ class Model3DSettings:
     route_width_mm: float = 1.8
     margin_mm: float = 4.0
     mode: Literal["route_only", "flat_map", "terrain"] = "flat_map"
+    dem_path: str | None = None
+    terrain_height_mm: float = 8.0
+    terrain_resolution: int = 96
     pins: bool = False
 
 

@@ -48,6 +48,16 @@ python -m strava_print.cli --gpx examples/Morning_Ride.gpx --template photo_left
 
 Cada execução gera `.pdf`, `.svg`, `.png`, `.jpg`, `*_base.stl`, `*_route.stl`, `*_combined.stl` e `*_project.json`. O GPX real não está no repositório; copie-o para `examples/Morning_Ride.gpx` para executar os comandos acima. `tests/fixtures/sample.gpx` é apenas uma fixture automatizada, não representa uma atividade real.
 
+### Relevo 3D com DEM
+
+Para obter montanhas e vales reais, use um GeoTIFF de elevação (DEM) que cubra toda a atividade. Envie-o na interface ou use a CLI:
+
+```bash
+python -m strava_print.cli --gpx examples/Morning_Ride.gpx --dem caminho/para/terreno.tif --terrain-height 8 --template classic_portrait --output output --stem morning_ride_terrain
+```
+
+O modo Terrain reprojeta o GPX para o CRS do GeoTIFF, recorta e reamostra o terreno e gera uma base circular fechada de 130 mm. `--terrain-height` controla o exagero vertical na peça, não altera os dados do GPX. Sem DEM, o modo Flat Map continua totalmente offline.
+
 ## Impressão e montagem
 
 O preset principal é A4 (210 x 297 mm); templates paisagem usam 297 x 210 mm. Os PNGs A4 são 2480 x 3508 px em 300 DPI. Ao imprimir no konbini, escolha **tamanho real/100%** e desative “ajustar à página” quando o papel corresponder ao arquivo. A página extra no PDF traz um quadrado de 50 mm, linha de 100 mm e círculo de 100 mm para conferência.

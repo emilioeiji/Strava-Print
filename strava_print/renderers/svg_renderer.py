@@ -58,7 +58,7 @@ def render_svg(
     chunks = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{template.width_mm}mm" height="{template.height_mm}mm" viewBox="0 0 {template.width_mm} {template.height_mm}">',
         f'<rect width="100%" height="100%" fill="{colors["background"]}"/>',
-        "<style>text{font-family:DejaVu Sans,Arial,sans-serif} .title{font-weight:700;letter-spacing:0} .label{font-size:5px;fill:#777}</style>",
+        "<style>text{font-family:DejaVu Sans,Arial,sans-serif} .title{font-weight:700;letter-spacing:1.8px} .label{font-size:4px;letter-spacing:.25px;fill:#777}</style>",
     ]
     if e.get("photo") and project.photo.path:
         photo = e["photo"]
@@ -67,25 +67,52 @@ def render_svg(
             f'<image href="data:image/jpeg;base64,{photo_data}" x="{photo["x"]}" y="{photo["y"]}" width="{photo["width"]}" height="{photo["height"]}" preserveAspectRatio="xMidYMid slice"/>'
         )
     chunks += [
-        f'<text class="title" x="{e["title"]["x"]}" y="{e["title"]["y"]}" font-size="{e["title"]["size"]}" fill="{colors["ink"]}">{title}</text>',
-        f'<text x="{e["meta"]["x"]}" y="{e["meta"]["y"]}" font-size="{e["meta"]["size"]}" fill="{colors["muted"]}">{meta}</text>',
+        f'<text class="title" x="{e["title"]["x"]}" y="{e["title"]["y"]}" font-size="{e["title"]["size"]}" fill="{colors["ink"]}" text-anchor="{e["title"].get("align", "start")}">{title}</text>',
+        f'<text x="{e["meta"]["x"]}" y="{e["meta"]["y"]}" font-size="{e["meta"]["size"]}" fill="{colors["muted"]}" text-anchor="{e["meta"].get("align", "start")}">{meta}</text>',
     ]
+    is_circle = map_box.get("shape") == "circle"
+    center_x = map_box["x"] + map_box["width"] / 2
+    center_y = map_box["y"] + map_box["height"] / 2
+    radius = min(map_box["width"], map_box["height"]) / 2
+    if is_circle:
+        chunks.append(
+            f'<defs><clipPath id="route-area"><circle cx="{center_x}" cy="{center_y}" r="{radius}"/></clipPath></defs>'
+        )
     if guide != "invisible":
         dash = ' stroke-dasharray="2 2"' if guide == "dashed" else ""
-        chunks.append(
-            f'<rect x="{map_box["x"]}" y="{map_box["y"]}" width="{map_box["width"]}" height="{map_box["height"]}" fill="none" stroke="{colors["guide"]}" stroke-width="0.35"{dash}/>'
-        )
+        if is_circle:
+            chunks.append(
+                f'<circle cx="{center_x}" cy="{center_y}" r="{radius}" fill="none" stroke="{colors["guide"]}" stroke-width="0.35"{dash}/>'
+            )
+        else:
+            chunks.append(
+                f'<rect x="{map_box["x"]}" y="{map_box["y"]}" width="{map_box["width"]}" height="{map_box["height"]}" fill="none" stroke="{colors["guide"]}" stroke-width="0.35"{dash}/>'
+            )
+    clip = ' clip-path="url(#route-area)"' if is_circle else ""
     chunks.append(
-        f'<polyline points="{points}" fill="none" stroke="{colors["accent"]}" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>'
+        f'<polyline points="{points}" fill="none" stroke="{colors["accent"]}" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"{clip}/>'
     )
+    start_x, start_y = map_box["x"] + route[0, 0], map_box["y"] + map_box["height"] - route[0, 1]
+    end_x, end_y = map_box["x"] + route[-1, 0], map_box["y"] + map_box["height"] - route[-1, 1]
+    chunks += [
+        f'<circle cx="{start_x}" cy="{start_y}" r="2.2" fill="#ffffff" stroke="{colors["accent"]}" stroke-width="0.8"/>',
+        f'<circle cx="{end_x}" cy="{end_y}" r="2.2" fill="{colors["accent"]}" stroke="#ffffff" stroke-width="0.8"/>',
+    ]
     metrics = _metric_values(activity, project)
     metric_box = e["metrics"]
     for index, (value, label) in enumerate(metrics):
         x = metric_box["x"] + index * metric_box["width"] / max(len(metrics), 1)
+        if index:
+            chunks.append(
+                f'<line x1="{x}" y1="{metric_box["y"] - 12}" x2="{x}" y2="{metric_box["y"] + 10}" stroke="{colors["guide"]}" stroke-width="0.25"/>'
+            )
         chunks.append(
-            f'<text x="{x}" y="{metric_box["y"]}" font-size="10" fill="{colors["ink"]}">{escape(value)}</text><text class="label" x="{x}" y="{metric_box["y"] + 7}">{escape(label)}</text>'
+            f'<text x="{x + metric_box["width"] / max(len(metrics), 1) / 2}" y="{metric_box["y"]}" text-anchor="middle" font-size="9" fill="{colors["ink"]}">{escape(value)}</text><text class="label" text-anchor="middle" x="{x + metric_box["width"] / max(len(metrics), 1) / 2}" y="{metric_box["y"] + 7}">{escape(label)}</text>'
         )
     footer = escape(project.description or "GPX PRINT · LOCAL EDITION")
+    chunks.append(
+        f'<line x1="15" y1="272" x2="195" y2="272" stroke="{colors["guide"]}" stroke-width="0.35"/>'
+    )
     chunks.append(
         f'<text x="{e["footer"]["x"]}" y="{e["footer"]["y"]}" font-size="{e["footer"]["size"]}" fill="{colors["muted"]}">{footer}</text></svg>'
     )

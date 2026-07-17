@@ -8,3 +8,4 @@ output/
 examples/output/
 *.egg-info/
 .streamlit/secrets.toml
+.codex-remote-attachments/

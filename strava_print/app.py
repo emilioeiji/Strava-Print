@@ -22,6 +22,11 @@ st.markdown(
     .stApp { background: #ece9e2; color: #1d2428; }
     [data-testid="stSidebar"] { background: #e3dfd7; }
     [data-testid="stFileUploader"] { border-color: #596267; }
+    [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"],
+    [data-testid="stSidebar"] [data-baseweb="select"] > div,
+    [data-testid="stSidebar"] input { background: #fbfaf7 !important; color: #1d2428 !important; }
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] input::placeholder { color: #697176 !important; }
     .block-container { padding-top: 1.4rem; max-width: 1440px; }
     h1 { font-family: Arial Narrow, sans-serif; letter-spacing: 0; }
     </style>

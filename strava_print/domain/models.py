@@ -68,6 +68,9 @@ class Model3DSettings:
     dem_path: str | None = None
     terrain_height_mm: float = 8.0
     terrain_resolution: int = 96
+    terrain_route_style: Literal["inlay", "tube"] = "inlay"
+    inlay_clearance_mm: float = 0.15
+    inlay_floor_mm: float = 0.6
     pins: bool = False
 
 

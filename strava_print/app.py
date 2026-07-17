@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from strava_print.layouts.templates import available_templates, load_template
 from strava_print.layouts.themes import MATERIALS, ROUTE_COLORS, THEMES
 from strava_print.renderers.preview_renderer import render_framed_preview, render_mounted_preview
 from strava_print.renderers.raster_renderer import render_image
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="GPX Print Studio", page_icon="◉", layout="wide")
 st.markdown(
@@ -61,7 +64,10 @@ with st.sidebar:
     st.divider()
     st.subheader("Peça 3D")
     route_width = st.slider("Largura da rota (mm)", 0.8, 4.0, 1.8, 0.1)
+    route_height = st.slider("Altura da rota (mm)", 0.6, 3.0, 1.2, 0.1)
     terrain_height = st.slider("Altura do relevo (mm)", 2.0, 20.0, 8.0, 0.5)
+    support_free_inlay = st.toggle("Encaixe da rota sem suporte", value=True)
+    inlay_clearance = st.slider("Folga do encaixe por lado (mm)", 0.05, 0.35, 0.15, 0.05)
 
 if not gpx_upload:
     st.info("Envie um arquivo GPX para criar a primeira composição.")
@@ -93,7 +99,10 @@ with tempfile.TemporaryDirectory() as directory:
     )
     project.route_2d["rotation"] = map_rotation
     project.model_3d.route_width_mm = route_width
+    project.model_3d.route_height_mm = route_height
     project.model_3d.terrain_height_mm = terrain_height
+    project.model_3d.terrain_route_style = "inlay" if support_free_inlay else "tube"
+    project.model_3d.inlay_clearance_mm = inlay_clearance
     if photo_upload:
         photo_path = work / photo_upload.name
         photo_path.write_bytes(photo_upload.getvalue())
@@ -134,6 +143,11 @@ with tempfile.TemporaryDirectory() as directory:
             st.warning("Sem DEM: a prévia mostra material estilizado e o STL usa base plana.")
         st.divider()
         if st.button("Gerar pacote completo", type="primary", use_container_width=True):
-            files = export_all(activity, project, Path("output"), "activity")
-            st.success("Arquivos gerados em output/")
-            st.json({key: str(value) for key, value in files.items()})
+            try:
+                files = export_all(activity, project, Path("output"), "activity")
+            except (RuntimeError, ValueError) as error:
+                logger.exception("Falha ao gerar o pacote de exportacao")
+                st.error(f"Não foi possível gerar os arquivos: {error}")
+            else:
+                st.success("Arquivos gerados em output/")
+                st.json({key: str(value) for key, value in files.items()})

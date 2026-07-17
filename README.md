@@ -13,7 +13,7 @@ Aplicação local em Python para transformar uma atividade GPX em arte para quad
 - Mockup de quadro completo, detalhe 3D e acabamentos selecionáveis para material e cor da rota.
 - Temas Minimal Light, Warm Paper, Dark e Strava Inspired, sem logotipo oficial.
 - PDF A4 em tamanho físico real, SVG editável, PNG/JPG 300 DPI e página opcional de calibração.
-- Base, rota e modelo combinado em STL. A rota é uma malha tubular contínua, não uma coleção de segmentos soltos.
+- Base, rota e modelo combinado em STL. No modo Terrain, a base recebe um canal e a rota é um inserto contínuo de fundo plano, imprimível sem suportes.
 - Interface Streamlit e CLI sem dependência de mapas externos ou chaves de API.
 
 ## Instalação
@@ -55,10 +55,10 @@ Cada execução gera `.pdf`, `.svg`, `.png`, `.jpg`, `*_base.stl`, `*_route.stl`
 Para obter montanhas e vales reais, use um GeoTIFF de elevação (DEM) que cubra toda a atividade. Envie-o na interface ou use a CLI:
 
 ```bash
-python -m strava_print.cli --gpx examples/Morning_Ride.gpx --dem caminho/para/terreno.tif --terrain-height 8 --template classic_portrait --output output --stem morning_ride_terrain
+python -m strava_print.cli --gpx examples/Morning_Ride.gpx --dem caminho/para/terreno.tif --terrain-height 8 --terrain-route-style inlay --inlay-clearance 0.15 --template classic_portrait --output output --stem morning_ride_terrain
 ```
 
-O modo Terrain reprojeta o GPX para o CRS do GeoTIFF, recorta e reamostra o terreno e gera uma base circular fechada de 130 mm. `--terrain-height` controla o exagero vertical na peça, não altera os dados do GPX. Sem DEM, o modo Flat Map continua totalmente offline.
+O modo Terrain reprojeta o GPX para o CRS do GeoTIFF, recorta e reamostra o terreno e gera uma base circular fechada de 130 mm. Por padrão, `inlay` recorta um canal na base e gera a rota inteira com fundo plano para impressão direta na mesa. A folga padrão de `0,15 mm` por lado pode ser aumentada para impressoras menos precisas. Use `--terrain-route-style tube` para manter a antiga rota tubular sobre a superfície. `--terrain-height` controla o exagero vertical na peça, não altera os dados do GPX. Sem DEM, o modo Flat Map continua totalmente offline.
 
 ## Impressão e montagem
 
@@ -66,7 +66,7 @@ O preset principal é A4 (210 x 297 mm); templates paisagem usam 297 x 210 mm. O
 
 Para Canon Selphy, exporte um arquivo menor por um template futuro ou imprima a composição em 100 x 148 mm/cartão postal/4 x 6 in sem redimensionamento automático. A Selphy é apropriada para versões menores; o A4 é mais apropriado ao konbini.
 
-A guia clara no layout Classic corresponde à área ocupada pela peça STL: o padrão de largura da base é 130 mm e pode ser alterado no editor. Imprima base e rota em cores diferentes, depois cole a rota sobre a base e a base sobre o pôster usando a guia.
+A guia clara no layout Classic corresponde à área ocupada pela peça STL: o padrão de largura da base é 130 mm e pode ser alterado no editor. Imprima `base.stl` apoiado pela face plana e `route.stl` com o fundo plano na mesa, em cores diferentes. Pressione a rota no canal e use uma pequena quantidade de cola apenas depois de confirmar o encaixe. O `combined.stl` serve como referência montada ou para impressão multimaterial.
 
 ## Desenvolvimento
 
@@ -76,7 +76,7 @@ ruff check .
 python -m strava_print.cli --gpx tests/fixtures/sample.gpx --output output --stem sample
 ```
 
-Limitações da primeira versão: o modo Terrain ainda usa base plana offline; pinos de encaixe estão modelados como opção de projeto, mas não são gerados; presets Selphy serão incluídos como templates dedicados. Dados como calorias, frequência cardíaca, potência e cadência não são inventados.
+Limitações da primeira versão: operações de encaixe aumentam a quantidade de faces do STL; pinos de encaixe estão modelados como opção de projeto, mas não são gerados; presets Selphy serão incluídos como templates dedicados. Dados como calorias, frequência cardíaca, potência e cadência não são inventados.
 
 ## Licença
 

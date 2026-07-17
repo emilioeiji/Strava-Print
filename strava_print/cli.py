@@ -22,6 +22,8 @@ def main() -> None:
     parser.add_argument("--dem", help="GeoTIFF DEM usado pelo modo terrain")
     parser.add_argument("--terrain-height", type=float, default=8.0)
     parser.add_argument("--terrain-resolution", type=int, default=96)
+    parser.add_argument("--terrain-route-style", choices=["inlay", "tube"], default="inlay")
+    parser.add_argument("--inlay-clearance", type=float, default=0.15)
     parser.add_argument("--units", choices=["metric", "imperial"], default="metric")
     parser.add_argument("--output", required=True)
     parser.add_argument("--stem", default="activity")
@@ -42,6 +44,8 @@ def main() -> None:
         project.model_3d.dem_path = args.dem
         project.model_3d.terrain_height_mm = args.terrain_height
         project.model_3d.terrain_resolution = args.terrain_resolution
+        project.model_3d.terrain_route_style = args.terrain_route_style
+        project.model_3d.inlay_clearance_mm = args.inlay_clearance
     files = export_all(activity, project, args.output, args.stem)
     print("Arquivos exportados:")
     for key, value in files.items():

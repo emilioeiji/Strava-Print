@@ -9,11 +9,19 @@ import trimesh
 def route_tube(
     points: np.ndarray, width_mm: float, z_mm: float | np.ndarray, sides: int = 8
 ) -> trimesh.Trimesh:
+    points = np.asarray(points, dtype=float)
+    if points.ndim != 2 or points.shape[1] != 2:
+        raise ValueError("Os pontos da rota devem ter o formato (N, 2).")
+
+    z_input = np.asarray(z_mm, dtype=float)
+    if z_input.ndim > 1 or (z_input.ndim == 1 and len(z_input) != len(points)):
+        raise ValueError("As alturas da rota devem ser um valor unico ou uma altura por ponto.")
+
     keep = np.r_[True, np.linalg.norm(np.diff(points, axis=0), axis=1) > 1e-6]
     points = points[keep]
     if len(points) < 2:
         raise ValueError("Rota sem pontos suficientes para STL.")
-    z_values = np.broadcast_to(np.asarray(z_mm, dtype=float), len(points))
+    z_values = np.full(len(points), float(z_input)) if z_input.ndim == 0 else z_input[keep]
     radius = width_mm / 2
     vertices: list[list[float]] = []
     for i, point in enumerate(points):

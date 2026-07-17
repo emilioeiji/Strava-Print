@@ -37,3 +37,13 @@ def normalized_route(
     usable_w, usable_h = max(width - margin * 2, 1), max(height - margin * 2, 1)
     scale = min(usable_w / max(span[0], 1e-12), usable_h / max(span[1], 1e-12))
     return raw * scale + np.array([width / 2, height / 2])
+
+
+def fit_route_to_circle(route: np.ndarray, diameter: float, margin: float = 4.0) -> np.ndarray:
+    """Scale an already-normalized route so every point lies inside a circular guide."""
+    center = np.array([diameter / 2, diameter / 2])
+    offset = route - center
+    max_radius = float(np.linalg.norm(offset, axis=1).max())
+    if max_radius == 0:
+        return route
+    return offset * ((diameter / 2 - margin) / max_radius) + center

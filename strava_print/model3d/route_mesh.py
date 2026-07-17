@@ -7,6 +7,8 @@ import trimesh
 
 
 def route_tube(points: np.ndarray, width_mm: float, z_mm: float, sides: int = 8) -> trimesh.Trimesh:
+    keep = np.r_[True, np.linalg.norm(np.diff(points, axis=0), axis=1) > 1e-6]
+    points = points[keep]
     if len(points) < 2:
         raise ValueError("Rota sem pontos suficientes para STL.")
     radius = width_mm / 2

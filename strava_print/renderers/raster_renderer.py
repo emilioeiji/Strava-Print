@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from strava_print.domain.models import Activity, Project
-from strava_print.gpx.geometry import normalized_route
+from strava_print.gpx.geometry import fit_route_to_circle, normalized_route
 from strava_print.layouts.photo import prepare_photo
 from strava_print.layouts.templates import Template
 from strava_print.layouts.themes import THEMES
@@ -54,6 +54,8 @@ def render_image(
         4,
         float(project.route_2d.get("rotation", 0)),
     )
+    if map_box.get("shape") == "circle":
+        route = fit_route_to_circle(route, min(map_box["width"], map_box["height"]))
     coordinates = [
         (round((map_box["x"] + x) * scale), round((map_box["y"] + map_box["height"] - y) * scale))
         for x, y in route

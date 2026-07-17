@@ -1,4 +1,4 @@
-"""Local Streamlit editor for GPX poster projects."""
+"""Local Streamlit editor for premium GPX terrain posters."""
 
 from __future__ import annotations
 
@@ -11,27 +11,56 @@ from strava_print.domain.models import Project
 from strava_print.export.package import export_all
 from strava_print.gpx.parser import GPXError, parse_gpx
 from strava_print.layouts.templates import available_templates, load_template
+from strava_print.layouts.themes import THEMES
+from strava_print.renderers.preview_renderer import render_mounted_preview
 from strava_print.renderers.raster_renderer import render_image
 
-st.set_page_config(page_title="Strava Print", layout="wide")
+st.set_page_config(page_title="GPX Print Studio", page_icon="◉", layout="wide")
+st.markdown(
+    """
+    <style>
+    .stApp { background: #ece9e2; color: #1d2428; }
+    [data-testid="stSidebar"] { background: #202629; }
+    [data-testid="stSidebar"] * { color: #f4f1e9; }
+    [data-testid="stFileUploader"] { border-color: #596267; }
+    .block-container { padding-top: 1.4rem; max-width: 1440px; }
+    h1 { font-family: Arial Narrow, sans-serif; letter-spacing: 0; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 st.title("GPX Print Studio")
+st.caption("Editor local de pôster e relevo 3D personalizado")
+
 with st.sidebar:
+    st.subheader("Fontes")
     gpx_upload = st.file_uploader("Arquivo GPX", type=["gpx"])
-    photo_upload = st.file_uploader("Fotografia", type=["jpg", "jpeg", "png", "webp"])
-    dem_upload = st.file_uploader("DEM GeoTIFF (opcional, para relevo 3D)", type=["tif", "tiff"])
-    template_name = st.selectbox("Layout", available_templates())
+    photo_upload = st.file_uploader("Fotografia opcional", type=["jpg", "jpeg", "png", "webp"])
+    dem_upload = st.file_uploader("DEM GeoTIFF para relevo", type=["tif", "tiff"])
+    st.divider()
+    st.subheader("Composição")
+    template_options = available_templates()
+    default_template = template_options.index("classic_portrait")
+    template_name = st.selectbox("Layout", template_options, index=default_template)
+    theme_name = st.selectbox("Tema", list(THEMES), index=0)
     title = st.text_input("Título", "Morning Ride")
-    location = st.text_input("Local", "Izumo, Shimane, Japan")
+    date = st.text_input("Data", "")
+    location = st.text_input("Local", "")
+    country = st.text_input("País", "")
     activity_type = st.selectbox(
         "Atividade", ["cycling", "running", "walking", "hiking", "generic"]
     )
     units = st.radio("Unidades", ["metric", "imperial"], horizontal=True)
-    map_rotation = st.slider("Rotação do mapa", -180, 180, 0)
-    route_width = st.slider("Largura da rota 3D (mm)", 0.8, 4.0, 1.8, 0.1)
+    map_rotation = st.slider("Rotação da rota", -180, 180, 0)
+    st.divider()
+    st.subheader("Peça 3D")
+    route_width = st.slider("Largura da rota (mm)", 0.8, 4.0, 1.8, 0.1)
     terrain_height = st.slider("Altura do relevo (mm)", 2.0, 20.0, 8.0, 0.5)
+
 if not gpx_upload:
-    st.info("Envie um GPX para começar a pré-visualização.")
+    st.info("Envie um arquivo GPX para criar a primeira composição.")
     st.stop()
+
 with tempfile.TemporaryDirectory() as directory:
     work = Path(directory)
     gpx_path = work / "activity.gpx"
@@ -45,9 +74,12 @@ with tempfile.TemporaryDirectory() as directory:
         source_gpx=gpx_upload.name,
         template=template_name,
         title=title,
+        date=date,
         location=location,
+        country=country,
         activity_type=activity_type,
         units=units,
+        theme=THEMES[theme_name],
     )
     project.route_2d["rotation"] = map_rotation
     project.model_3d.route_width_mm = route_width
@@ -61,26 +93,30 @@ with tempfile.TemporaryDirectory() as directory:
         dem_path.write_bytes(dem_upload.getvalue())
         project.model_3d.dem_path = str(dem_path)
         project.model_3d.mode = "terrain"
-    left, right = st.columns([2, 1])
-    with left:
-        st.image(
-            render_image(activity, project, load_template(template_name)),
-            caption="Prévia proporcional do layout",
-        )
-    with right:
-        st.subheader("Dados identificados")
-        st.write(
-            {
-                "pontos": len(activity.points),
-                "distância_m": round(activity.metrics.distance_m),
-                "duração_s": activity.metrics.duration_s,
-                "ganho_m": activity.metrics.elevation_gain_m,
-            }
-        )
+
+    preview_column, details_column = st.columns([1.8, 1], gap="large")
+    with preview_column:
+        mounted_tab, print_tab = st.tabs(["Montado", "Arquivo de impressão"])
+        template = load_template(template_name)
+        with mounted_tab:
+            st.image(
+                render_mounted_preview(activity, project, template, dpi=140),
+                use_container_width=True,
+            )
+        with print_tab:
+            st.image(render_image(activity, project, template, dpi=140), use_container_width=True)
+    with details_column:
+        st.subheader("Atividade")
+        metric_a, metric_b = st.columns(2)
+        metric_a.metric("Distância", f"{activity.metrics.distance_m / 1000:.2f} km")
+        metric_b.metric("Ganho", f"{activity.metrics.elevation_gain_m or 0:.0f} m")
+        st.caption(f"{len(activity.points):,} pontos válidos no GPX")
         if dem_upload:
-            st.caption("Terrain ativo: o STL usará o relevo do GeoTIFF enviado.")
-        if st.button("Gerar pacote de exportação"):
-            output = Path("output")
-            files = export_all(activity, project, output, "activity")
-            st.success("Pacote gerado em output/")
+            st.success("Terrain ativo: o relevo real será usado nos arquivos STL.")
+        else:
+            st.warning("Sem DEM: a prévia mostra material estilizado e o STL usa base plana.")
+        st.divider()
+        if st.button("Gerar pacote completo", type="primary", use_container_width=True):
+            files = export_all(activity, project, Path("output"), "activity")
+            st.success("Arquivos gerados em output/")
             st.json({key: str(value) for key, value in files.items()})

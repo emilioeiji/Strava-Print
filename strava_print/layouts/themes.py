@@ -1,6 +1,15 @@
 """Small, printable theme palette collection."""
 
 THEMES = {
+    "Gallery Edition": {
+        "background": "#f4f1e9",
+        "ink": "#1d2428",
+        "muted": "#697176",
+        "accent": "#d6532f",
+        "guide": "#c9c3b8",
+        "map_fill": "#e7e1d7",
+        "material": "#72503d",
+    },
     "Minimal Light": {
         "background": "#ffffff",
         "ink": "#202124",

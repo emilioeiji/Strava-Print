@@ -10,9 +10,9 @@ from reportlab.pdfgen.canvas import Canvas
 
 from strava_print.domain.models import Activity, Project
 from strava_print.gpx.geometry import fit_route_to_circle, normalized_route
+from strava_print.layouts.presentation import metric_values
 from strava_print.layouts.templates import Template
 from strava_print.layouts.themes import THEMES
-from strava_print.renderers.svg_renderer import _metric_values
 
 
 def save_pdf(
@@ -24,7 +24,7 @@ def save_pdf(
 ) -> Path:
     output = Path(path)
     canvas = Canvas(str(output), pagesize=(template.width_mm * mm, template.height_mm * mm))
-    colors = {**THEMES["Minimal Light"], **project.theme}
+    colors = {**THEMES["Gallery Edition"], **project.theme}
     elements = template.elements
     canvas.setFillColor(colors["background"])
     canvas.rect(0, 0, template.width_mm * mm, template.height_mm * mm, fill=1, stroke=0)
@@ -44,16 +44,26 @@ def save_pdf(
             anchor="c",
             mask="auto",
         )
+    if eyebrow := elements.get("eyebrow"):
+        canvas.setFillColor(colors["accent"])
+        canvas.setFont("Helvetica", eyebrow["size"])
+        canvas.drawCentredString(
+            eyebrow["x"] * mm,
+            y(eyebrow["y"]),
+            f"{project.activity_type.upper()} / PERSONAL TERRAIN EDITION",
+        )
     title = elements["title"]
     canvas.setFillColor(colors["ink"])
     canvas.setFont("Helvetica-Bold", title["size"])
-    text = project.title or "Untitled activity"
+    text = (project.title or "Untitled activity").upper()
     if title.get("align") == "center":
         canvas.drawCentredString(title["x"] * mm, y(title["y"]), text)
     else:
         canvas.drawString(title["x"] * mm, y(title["y"]), text)
     meta_element = elements["meta"]
-    meta = " / ".join(value for value in [project.date, project.location, project.country] if value)
+    meta = " / ".join(
+        value.upper() for value in [project.date, project.location, project.country] if value
+    )
     canvas.setFillColor(colors["muted"])
     canvas.setFont("Helvetica", meta_element["size"])
     if meta_element.get("align") == "center":
@@ -63,11 +73,12 @@ def save_pdf(
     map_box = elements["map"]
     canvas.setStrokeColor(colors["guide"])
     if map_box.get("shape") == "circle":
+        canvas.setFillColor(colors["map_fill"])
         canvas.circle(
             (map_box["x"] + map_box["width"] / 2) * mm,
             y(map_box["y"] + map_box["height"] / 2),
             min(map_box["width"], map_box["height"]) / 2 * mm,
-            fill=0,
+            fill=1,
         )
     else:
         canvas.rect(
@@ -95,8 +106,19 @@ def save_pdf(
     canvas.setStrokeColor(colors["accent"])
     canvas.setLineWidth(1.25 * mm)
     canvas.drawPath(route)
+    if caption := elements.get("map_caption"):
+        canvas.setFillColor(colors["muted"])
+        canvas.setFont("Helvetica", caption["size"])
+        canvas.drawCentredString(
+            caption["x"] * mm,
+            y(caption["y"]),
+            "CUSTOM GPX / 130 MM / TERRAIN READY",
+        )
     metric_box = elements["metrics"]
-    metrics = _metric_values(activity, project)
+    metrics = metric_values(activity, project)
+    canvas.setStrokeColor(colors["ink"])
+    canvas.setLineWidth(0.35 * mm)
+    canvas.line(15 * mm, y(metric_box["y"] - 18), 195 * mm, y(metric_box["y"] - 18))
     for index, (value, label) in enumerate(metrics):
         left = metric_box["x"] + index * metric_box["width"] / len(metrics)
         right = metric_box["x"] + (index + 1) * metric_box["width"] / len(metrics)

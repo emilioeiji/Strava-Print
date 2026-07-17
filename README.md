@@ -9,6 +9,7 @@ Aplicação local em Python para transformar uma atividade GPX em arte para quad
 - Leitura defensiva de GPX, inclusive múltiplos segmentos, sem elevação e sem timestamps.
 - Métricas de distância, duração, movimento estimado, ganho/perda, altitudes, velocidade e ritmo quando os dados permitem.
 - Templates configuráveis em JSON: `classic_portrait`, `classic_landscape`, `photo_left_portrait` e `photo_top_portrait`.
+- Tema Gallery Edition com composição editorial, peça central simulada e prévia separada do arquivo limpo de impressão.
 - Temas Minimal Light, Warm Paper, Dark e Strava Inspired, sem logotipo oficial.
 - PDF A4 em tamanho físico real, SVG editável, PNG/JPG 300 DPI e página opcional de calibração.
 - Base, rota e modelo combinado em STL. A rota é uma malha tubular contínua, não uma coleção de segmentos soltos.

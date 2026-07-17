@@ -39,3 +39,17 @@ THEMES = {
         "guide": "#dedede",
     },
 }
+
+MATERIALS = {
+    "Burnished Bronze": "#7b523d",
+    "Graphite": "#414649",
+    "Terracotta": "#99543b",
+    "Forest": "#4f6252",
+}
+
+ROUTE_COLORS = {
+    "Signal Orange": "#f4552f",
+    "Ivory": "#eee3ce",
+    "Aqua": "#319b9a",
+    "Crimson": "#c83f37",
+}

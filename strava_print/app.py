@@ -11,8 +11,8 @@ from strava_print.domain.models import Project
 from strava_print.export.package import export_all
 from strava_print.gpx.parser import GPXError, parse_gpx
 from strava_print.layouts.templates import available_templates, load_template
-from strava_print.layouts.themes import THEMES
-from strava_print.renderers.preview_renderer import render_mounted_preview
+from strava_print.layouts.themes import MATERIALS, ROUTE_COLORS, THEMES
+from strava_print.renderers.preview_renderer import render_framed_preview, render_mounted_preview
 from strava_print.renderers.raster_renderer import render_image
 
 st.set_page_config(page_title="GPX Print Studio", page_icon="◉", layout="wide")
@@ -20,8 +20,7 @@ st.markdown(
     """
     <style>
     .stApp { background: #ece9e2; color: #1d2428; }
-    [data-testid="stSidebar"] { background: #202629; }
-    [data-testid="stSidebar"] * { color: #f4f1e9; }
+    [data-testid="stSidebar"] { background: #e3dfd7; }
     [data-testid="stFileUploader"] { border-color: #596267; }
     .block-container { padding-top: 1.4rem; max-width: 1440px; }
     h1 { font-family: Arial Narrow, sans-serif; letter-spacing: 0; }
@@ -43,6 +42,8 @@ with st.sidebar:
     default_template = template_options.index("classic_portrait")
     template_name = st.selectbox("Layout", template_options, index=default_template)
     theme_name = st.selectbox("Tema", list(THEMES), index=0)
+    material_name = st.selectbox("Material da peça", list(MATERIALS))
+    route_color_name = st.selectbox("Cor da rota", list(ROUTE_COLORS))
     title = st.text_input("Título", "Morning Ride")
     date = st.text_input("Data", "")
     location = st.text_input("Local", "")
@@ -79,7 +80,11 @@ with tempfile.TemporaryDirectory() as directory:
         country=country,
         activity_type=activity_type,
         units=units,
-        theme=THEMES[theme_name],
+        theme={
+            **THEMES[theme_name],
+            "material": MATERIALS[material_name],
+            "accent": ROUTE_COLORS[route_color_name],
+        },
     )
     project.route_2d["rotation"] = map_rotation
     project.model_3d.route_width_mm = route_width
@@ -96,8 +101,15 @@ with tempfile.TemporaryDirectory() as directory:
 
     preview_column, details_column = st.columns([1.8, 1], gap="large")
     with preview_column:
-        mounted_tab, print_tab = st.tabs(["Montado", "Arquivo de impressão"])
+        frame_tab, mounted_tab, print_tab = st.tabs(
+            ["Quadro", "Detalhe 3D", "Arquivo de impressão"]
+        )
         template = load_template(template_name)
+        with frame_tab:
+            st.image(
+                render_framed_preview(activity, project, template),
+                use_container_width=True,
+            )
         with mounted_tab:
             st.image(
                 render_mounted_preview(activity, project, template, dpi=140),

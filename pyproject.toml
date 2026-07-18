@@ -20,6 +20,7 @@ dependencies = [
     "mapbox-earcut>=1.0",
     "Django>=5.2,<5.3",
     "dj-database-url>=2.3",
+    "python-dotenv>=1.0",
     "whitenoise>=6.9",
 ]
 
@@ -27,8 +28,7 @@ dependencies = [
 dev = ["pytest>=8", "pytest-django>=4.9", "ruff>=0.6", "mypy>=1.11"]
 legacy = ["streamlit>=1.36"]
 production = [
-    "gunicorn>=23",
-    "psycopg[binary]>=3.2",
+    "mysqlclient>=2.2",
     "django-storages[s3]>=1.14",
     "stripe>=11",
 ]

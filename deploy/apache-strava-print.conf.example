@@ -1,0 +1,43 @@
+<VirtualHost *:80>
+    ServerName quadros.exemplo.com
+    Redirect permanent / https://quadros.exemplo.com/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName quadros.exemplo.com
+    ServerAdmin admin@exemplo.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/quadros.exemplo.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/quadros.exemplo.com/privkey.pem
+
+    WSGIDaemonProcess strava_print user=www-data group=www-data processes=2 threads=4 \
+        python-home=/var/www/strava-print/.venv \
+        python-path=/var/www/strava-print \
+        lang=C.UTF-8 locale=C.UTF-8
+    WSGIProcessGroup strava_print
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIScriptAlias / /var/www/strava-print/strava_print_web/wsgi.py \
+        process-group=strava_print application-group=%{GLOBAL}
+
+    Alias /static/ /var/www/strava-print/staticfiles/
+
+    <Directory /var/www/strava-print/staticfiles>
+        Require all granted
+    </Directory>
+
+    <Directory /var/www/strava-print/strava_print_web>
+        <Files wsgi.py>
+            Require all granted
+        </Files>
+    </Directory>
+
+    # Uploads e exports permanecem privados e passam pelas views autorizadas.
+    <Directory /var/www/strava-print/media>
+        Require all denied
+    </Directory>
+
+    LimitRequestBody 283115520
+    ErrorLog ${APACHE_LOG_DIR}/strava-print-error.log
+    CustomLog ${APACHE_LOG_DIR}/strava-print-access.log combined
+</VirtualHost>

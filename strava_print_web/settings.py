@@ -6,8 +6,16 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+_configured_env_file = os.getenv("DJANGO_ENV_FILE")
+_env_candidates = [Path(_configured_env_file)] if _configured_env_file else [Path("/etc/strava-print.env"), BASE_DIR / ".env"]
+for _env_file in _env_candidates:
+    if _env_file.is_file():
+        load_dotenv(_env_file, override=False)
+        break
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "local-development-key-change-before-deploying")
 DEBUG = os.getenv("DJANGO_DEBUG", "1").lower() in {"1", "true", "yes"}
@@ -57,12 +65,40 @@ TEMPLATES = [
 WSGI_APPLICATION = "strava_print_web.wsgi.application"
 ASGI_APPLICATION = "strava_print_web.asgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=60,
-    )
-}
+if os.getenv("DATABASE_URL"):
+    DATABASES = {"default": dj_database_url.parse(os.environ["DATABASE_URL"], conn_max_age=60)}
+elif os.getenv("DB_NAME"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ["DB_NAME"],
+            "USER": os.getenv("DB_USER", "strava_print"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+            "PORT": os.getenv("DB_PORT", "3306"),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "isolation_level": "read committed",
+            },
+        }
+    }
+else:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=0,
+        )
+    }
+
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"].setdefault("CONN_HEALTH_CHECKS", True)
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].setdefault("charset", "utf8mb4")
+    DATABASES["default"]["OPTIONS"].setdefault("init_command", "SET sql_mode='STRICT_TRANS_TABLES'")
+    DATABASES["default"]["OPTIONS"].setdefault("isolation_level", "read committed")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

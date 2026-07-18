@@ -1,0 +1,18 @@
+[Unit]
+Description=Strava Print export worker
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/strava-print
+EnvironmentFile=-/etc/strava-print.env
+ExecStart=/var/www/strava-print/.venv/bin/python manage.py process_export_jobs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

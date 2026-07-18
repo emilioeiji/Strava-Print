@@ -104,45 +104,96 @@ pip install -e ".[legacy]"
 streamlit run strava_print/app.py
 ```
 
-## Configuração e Linux
+## Deploy Linux com Apache e MariaDB
 
-As configurações usam variáveis de ambiente. Copie `.env.example` para sua ferramenta de ambiente e defina uma chave secreta forte antes de publicar. Sem `DATABASE_URL`, o projeto usa SQLite. Para PostgreSQL, instale `.[production]` e informe, por exemplo:
+O deploy de produção foi preparado para ambiente virtual, Apache `mod_wsgi` e MariaDB. SQLite continua disponível somente para desenvolvimento. As configurações são lidas do ambiente, de `.env` no diretório do projeto ou, preferencialmente em produção, de `/etc/strava-print.env`.
+
+Em Ubuntu/Debian, instale os pacotes do sistema:
 
 ```bash
-export DJANGO_SECRET_KEY="uma-chave-longa-e-aleatoria"
-export DJANGO_DEBUG=0
-export DJANGO_ALLOWED_HOSTS="quadros.exemplo.com"
-export DATABASE_URL="postgresql://usuario:senha@localhost:5432/strava_print"
+sudo apt update
+sudo apt install apache2 libapache2-mod-wsgi-py3 mariadb-server \
+  python3-venv python3-dev build-essential pkg-config default-libmysqlclient-dev
+```
+
+Crie o banco com UTF-8 e um usuário exclusivo:
+
+```sql
+CREATE DATABASE strava_print CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'strava_print'@'localhost' IDENTIFIED BY 'troque-esta-senha';
+GRANT ALL PRIVILEGES ON strava_print.* TO 'strava_print'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Instale o projeto no servidor:
+
+```bash
+sudo mkdir -p /var/www/strava-print
+sudo chown "$USER":www-data /var/www/strava-print
+git clone https://github.com/emilioeiji/Strava-Print.git /var/www/strava-print
+cd /var/www/strava-print
+git switch feat/django-commercial-studio
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e ".[production]"
+```
+
+Copie `.env.example` para `/etc/strava-print.env`, defina permissão `640` e preencha pelo menos:
+
+```dotenv
+DJANGO_SECRET_KEY=gere-uma-chave-longa-e-aleatoria
+DJANGO_DEBUG=0
+DJANGO_ALLOWED_HOSTS=quadros.exemplo.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://quadros.exemplo.com
+DB_NAME=strava_print
+DB_USER=strava_print
+DB_PASSWORD=troque-esta-senha
+DB_HOST=127.0.0.1
+DB_PORT=3306
+EXPORT_JOBS_INLINE=0
+```
+
+Senhas com caracteres especiais não precisam ser codificadas quando as variáveis `DB_*` são usadas. Depois, prepare banco, estáticos e permissões:
+
+```bash
+sudo chown root:www-data /etc/strava-print.env
+sudo chmod 640 /etc/strava-print.env
+source .venv/bin/activate
 python manage.py migrate
 python manage.py collectstatic --noinput
-gunicorn strava_print_web.wsgi:application --bind 0.0.0.0:8000 --timeout 300
+python manage.py check --deploy
+sudo mkdir -p media
+sudo chown -R www-data:www-data media
 ```
 
-O `Dockerfile` oferece uma alternativa baseada em Python 3.12. Em produção, coloque Nginx ou outro proxy reverso na frente do Gunicorn, limite uploads também no proxy, mantenha `media/` fora do Git e faça backup do banco e dos arquivos enviados. A [documentação oficial do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) deve ser revisada antes de abrir o serviço ao público.
+O `check --deploy` pode recomendar HSTS para subdomínios e preload. Ative `DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS` e `DJANGO_SECURE_HSTS_PRELOAD` somente quando todos os subdomínios estiverem definitivamente disponíveis por HTTPS.
 
-### Docker Compose
+### Apache mod_wsgi
 
-O Compose inicia PostgreSQL, aplicação e worker de exportações:
+Edite os domínios e caminhos de certificado em `deploy/apache-strava-print.conf.example`, copie para `/etc/apache2/sites-available/strava-print.conf` e habilite o site:
 
 ```bash
-cp .env.example .env
-# Edite as chaves e senhas antes de continuar.
-docker compose up --build
+sudo a2enmod wsgi ssl headers rewrite
+sudo a2ensite strava-print.conf
+sudo apache2ctl configtest
+sudo systemctl reload apache2
 ```
 
-Em `http://localhost:8000/health/`, a resposta `{"status":"ok"}` confirma que aplicação e banco estão acessíveis. O volume `media_data` guarda uploads e exportações; `postgres_data` guarda o banco.
+O exemplo usa `mod_wsgi` em modo daemon e serve `/static/` diretamente pelo Apache. O diretório `media/` não é publicado: GPX, fotos e exports continuam passando pelas views autenticadas. A resposta `{"status":"ok"}` em `https://seu-dominio/health/` confirma a aplicação.
 
-### Worker sem Docker
+### Worker systemd
 
-Em produção, use dois processos. O web cria jobs e o worker os processa:
+O Apache atende a interface e um serviço separado processa os exports. Copie `deploy/strava-print-worker.service.example` para `/etc/systemd/system/strava-print-worker.service`:
 
 ```bash
-export EXPORT_JOBS_INLINE=0
-gunicorn strava_print_web.wsgi:application --bind 0.0.0.0:8000 --timeout 300
-python manage.py process_export_jobs
+sudo systemctl daemon-reload
+sudo systemctl enable --now strava-print-worker
+sudo systemctl status strava-print-worker
+journalctl -u strava-print-worker -f
 ```
 
-SQLite é adequado para desenvolvimento e um único worker. Use PostgreSQL quando houver concorrência.
+Após cada atualização do código, ative o venv, instale dependências, execute `migrate` e `collectstatic`, então reinicie Apache e worker. Revise também a [checklist oficial de deploy do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).
 
 ### Pagamentos Stripe
 
@@ -178,7 +229,7 @@ python manage.py cleanup_projects --days 90 --dry-run
 python manage.py cleanup_projects --days 90
 ```
 
-Faça backup diário do PostgreSQL e do storage. Projetos vinculados a pedidos são protegidos da limpeza automática.
+Faça backup diário do MariaDB e do storage. Projetos vinculados a pedidos são protegidos da limpeza automática. Um exemplo de backup é `mariadb-dump --single-transaction strava_print > strava_print.sql`.
 
 ## Estrutura
 

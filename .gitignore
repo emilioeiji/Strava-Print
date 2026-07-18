@@ -10,3 +10,7 @@ examples/output/
 .streamlit/secrets.toml
 .codex-remote-attachments/
 examples/*.gpx
+db.sqlite3
+media/
+staticfiles/
+.env

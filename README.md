@@ -1,6 +1,6 @@
-# Strava Print
+# GPX Print Studio
 
-Aplicação local em Python para transformar uma atividade GPX em arte para quadro: pôster físico, rota vetorial, arquivos rasterizados em 300 DPI e modelos 3D STL para sobrepor ao papel.
+Aplicação Django para transformar atividades GPX em quadros personalizados: editor visual, projetos persistentes, pôster físico, arquivos em 300 DPI e modelos 3D de terreno com rota encaixável. O motor de renderização continua disponível como biblioteca Python e CLI.
 
 > Strava é uma marca de seus respectivos proprietários. Este projeto não é afiliado nem endossado pela Strava.
 
@@ -14,31 +14,46 @@ Aplicação local em Python para transformar uma atividade GPX em arte para quad
 - Temas Minimal Light, Warm Paper, Dark e Strava Inspired, sem logotipo oficial.
 - PDF A4 em tamanho físico real, SVG editável, PNG/JPG 300 DPI e página opcional de calibração.
 - Base, rota e modelo combinado em STL. No modo Terrain, a base recebe um canal e a rota é um inserto contínuo de fundo plano, imprimível sem suportes.
-- Interface Streamlit e CLI sem dependência de mapas externos ou chaves de API.
+- Dashboard Django responsivo, contas opcionais, projetos por sessão e downloads protegidos.
+- Editor comercial com preview montado, configurações de foto, DEM, rota e exportação.
+- Pacote ZIP com PDF, SVG, PNG, JPG, JSON e três arquivos STL.
+- CLI independente, sem dependência obrigatória de mapas externos ou chaves de API.
 
 ## Instalação
 
-Windows PowerShell:
+### Windows PowerShell
 
 ```powershell
-py -m venv .venv
+py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-streamlit run strava_print/app.py
+python manage.py migrate
+python manage.py runserver
 ```
 
-Linux/macOS:
+Ou execute `./start.ps1`.
+
+### Linux/macOS
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-streamlit run strava_print/app.py
+python manage.py migrate
+python manage.py runserver
 ```
 
-## Uso pela interface
+Ou execute `chmod +x start.sh && ./start.sh`. Abra `http://127.0.0.1:8000`.
 
-Envie um `.gpx`, escolha o layout e edite título, local, atividade, unidades, rotação e largura da rota 3D. Nos layouts Photo, envie JPG, JPEG, PNG ou WEBP. A foto é renderizada com crop `cover`, sem deformação, e seus ajustes ficam no JSON de projeto.
+## Aplicação Django
+
+Na primeira tela, envie um GPX e nomeie o projeto. O editor extrai as métricas, cria a composição inicial e permite alterar textos, layout, tema, unidades, métricas, fotografia, DEM e parâmetros físicos do modelo 3D. **Atualizar visualização** salva o projeto e refaz o mockup; **Gerar pacote completo** produz todos os arquivos de fabricação.
+
+Projetos anônimos pertencem à sessão local do navegador. Uma conta pode ser criada para persistir a autoria e acessar os projetos associados. O admin do Django está disponível em `/admin/` depois de criar um superusuário:
+
+```bash
+python manage.py createsuperuser
+```
 
 ## Uso pela CLI
 
@@ -71,10 +86,44 @@ A guia clara no layout Classic corresponde à área ocupada pela peça STL: o pa
 ## Desenvolvimento
 
 ```bash
-pytest
-ruff check .
+python -m pytest -q
+python -m ruff check .
+python manage.py check
+python manage.py makemigrations --check --dry-run
 python -m strava_print.cli --gpx tests/fixtures/sample.gpx --output output --stem sample
 ```
+
+O Streamlit anterior foi mantido somente como interface legada. Para utilizá-lo:
+
+```bash
+pip install -e ".[legacy]"
+streamlit run strava_print/app.py
+```
+
+## Configuração e Linux
+
+As configurações usam variáveis de ambiente. Copie `.env.example` para sua ferramenta de ambiente e defina uma chave secreta forte antes de publicar. Sem `DATABASE_URL`, o projeto usa SQLite. Para PostgreSQL, instale `.[production]` e informe, por exemplo:
+
+```bash
+export DJANGO_SECRET_KEY="uma-chave-longa-e-aleatoria"
+export DJANGO_DEBUG=0
+export DJANGO_ALLOWED_HOSTS="quadros.exemplo.com"
+export DATABASE_URL="postgresql://usuario:senha@localhost:5432/strava_print"
+python manage.py migrate
+python manage.py collectstatic --noinput
+gunicorn strava_print_web.wsgi:application --bind 0.0.0.0:8000 --timeout 300
+```
+
+O `Dockerfile` oferece uma alternativa baseada em Python 3.12. Em produção, coloque Nginx ou outro proxy reverso na frente do Gunicorn, limite uploads também no proxy, mantenha `media/` fora do Git e faça backup do banco e dos arquivos enviados. A [documentação oficial do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) deve ser revisada antes de abrir o serviço ao público.
+
+## Estrutura
+
+- `strava_print/`: motor de GPX, layout, renderização e STL.
+- `strava_print_web/`: configuração do projeto Django.
+- `studio/`: modelos, formulários, serviços, views, assets e migrações.
+- `web_templates/`: dashboard, editor e autenticação.
+- `templates/`: configurações físicas dos layouts de impressão.
+- `media/`: uploads e exportações locais, ignorados pelo Git.
 
 Limitações da primeira versão: operações de encaixe aumentam a quantidade de faces do STL; pinos de encaixe estão modelados como opção de projeto, mas não são gerados; presets Selphy serão incluídos como templates dedicados. Dados como calorias, frequência cardíaca, potência e cadência não são inventados.
 

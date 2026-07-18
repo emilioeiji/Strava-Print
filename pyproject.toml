@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "strava-print"
 version = "0.1.0"
-description = "Local GPX poster and 3D route generator"
+description = "Commercial Django studio for GPX posters and printable 3D terrain"
 requires-python = ">=3.11"
 dependencies = [
     "gpxpy>=1.6",
@@ -13,25 +13,30 @@ dependencies = [
     "reportlab>=4",
     "numpy>=1.26",
     "trimesh>=4",
-    "streamlit>=1.36",
     "pypdf>=4",
     "rasterio>=1.4",
     "manifold3d>=3.0",
     "shapely>=2.0",
     "mapbox-earcut>=1.0",
+    "Django>=5.2,<5.3",
+    "dj-database-url>=2.3",
+    "whitenoise>=6.9",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+dev = ["pytest>=8", "pytest-django>=4.9", "ruff>=0.6", "mypy>=1.11"]
+legacy = ["streamlit>=1.36"]
+production = ["gunicorn>=23", "psycopg[binary]>=3.2"]
 
 [project.scripts]
 strava-print = "strava_print.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["strava_print*"]
+include = ["strava_print*", "strava_print_web*", "studio*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "strava_print_web.settings"
 
 [tool.ruff]
 line-length = 100

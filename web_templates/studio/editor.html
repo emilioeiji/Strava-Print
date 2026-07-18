@@ -1,0 +1,137 @@
+{% extends "studio/base.html" %}
+{% load static %}
+{% block title %}{{ project.name }} | GPX Print Studio{% endblock %}
+{% block body_class %}editor-page{% endblock %}
+{% block content %}
+<main class="editor-shell">
+  <form id="editor-form" class="editor-form" enctype="multipart/form-data" data-preview-url="{% url 'studio:preview' project.id %}" data-export-url="{% url 'studio:export' project.id %}">
+    {% csrf_token %}
+    <aside class="control-rail" aria-label="Configuração do projeto">
+      <div class="rail-heading">
+        <a class="back-link" href="{% url 'studio:dashboard' %}">← Projetos</a>
+        <span class="save-state" id="save-state">{{ project.get_status_display }}</span>
+      </div>
+      <div class="project-name-field">{{ form.name }}</div>
+
+      <div class="control-tabs" role="tablist">
+        <button type="button" class="control-tab is-active" data-tab="composition">Composição</button>
+        <button type="button" class="control-tab" data-tab="media">Arquivos</button>
+        <button type="button" class="control-tab" data-tab="model">3D</button>
+      </div>
+
+      <div class="control-panel is-active" data-panel="composition">
+        <section class="control-section">
+          <h2>Texto</h2>
+          <label>{{ form.title.label }}{{ form.title }}</label>
+          <label>{{ form.subtitle.label }}{{ form.subtitle }}</label>
+          <div class="field-row"><label>{{ form.date.label }}{{ form.date }}</label><label>{{ form.country.label }}{{ form.country }}</label></div>
+          <label>{{ form.location.label }}{{ form.location }}</label>
+          <label>{{ form.description.label }}{{ form.description }}</label>
+        </section>
+        <section class="control-section">
+          <h2>Direção de arte</h2>
+          <label>{{ form.template_name.label }}{{ form.template_name }}</label>
+          <label>{{ form.theme_name.label }}{{ form.theme_name }}</label>
+          <div class="field-row"><label>{{ form.activity_type.label }}{{ form.activity_type }}</label><fieldset><legend>{{ form.units.label }}</legend>{{ form.units }}</fieldset></div>
+          <label>{{ form.material.label }}{{ form.material }}</label>
+          <fieldset class="swatch-field"><legend>{{ form.route_color.label }}</legend><div class="color-swatches">
+            <label title="Signal Orange"><input type="radio" name="route_color" value="Signal Orange" {% if form.route_color.value == "Signal Orange" %}checked{% endif %}><span class="swatch swatch-orange"></span></label>
+            <label title="Ivory"><input type="radio" name="route_color" value="Ivory" {% if form.route_color.value == "Ivory" %}checked{% endif %}><span class="swatch swatch-ivory"></span></label>
+            <label title="Aqua"><input type="radio" name="route_color" value="Aqua" {% if form.route_color.value == "Aqua" %}checked{% endif %}><span class="swatch swatch-aqua"></span></label>
+            <label title="Crimson"><input type="radio" name="route_color" value="Crimson" {% if form.route_color.value == "Crimson" %}checked{% endif %}><span class="swatch swatch-crimson"></span></label>
+          </div></fieldset>
+          <label>{{ form.route_rotation.label }}<output data-output-for="id_route_rotation">{{ form.route_rotation.value }}</output>{{ form.route_rotation.as_widget }}</label>
+        </section>
+        <section class="control-section metric-selector">
+          <h2>Métricas</h2>
+          {{ form.visible_metrics }}
+        </section>
+      </div>
+
+      <div class="control-panel" data-panel="media">
+        <section class="control-section">
+          <h2>Fontes</h2>
+          <label class="file-control">{{ form.gpx_file }}<span><strong>Substituir GPX</strong><small>{{ project.source_filename }}</small></span></label>
+          <label class="file-control">{{ form.photo_file }}<span><strong>Fotografia</strong><small>{% if project.photo_file %}{{ project.photo_file.name }}{% else %}JPG, PNG ou WEBP{% endif %}</small></span></label>
+          <label class="file-control">{{ form.dem_file }}<span><strong>Terreno DEM</strong><small>{% if project.dem_file %}{{ project.dem_file.name }}{% else %}GeoTIFF opcional{% endif %}</small></span></label>
+        </section>
+        <section class="control-section">
+          <h2>Tratamento da foto</h2>
+          <label>{{ form.photo_x.label }}{{ form.photo_x }}</label>
+          <label>{{ form.photo_y.label }}{{ form.photo_y }}</label>
+          <label>{{ form.photo_zoom.label }}{{ form.photo_zoom }}</label>
+          <label>{{ form.photo_rotation.label }}{{ form.photo_rotation }}</label>
+          <label>{{ form.photo_brightness.label }}{{ form.photo_brightness }}</label>
+          <label>{{ form.photo_contrast.label }}{{ form.photo_contrast }}</label>
+          <label>{{ form.photo_overlay.label }}{{ form.photo_overlay }}</label>
+          <label class="toggle-row">{{ form.photo_grayscale }}<span>{{ form.photo_grayscale.label }}</span></label>
+          <label class="toggle-row">{{ form.photo_rounded }}<span>{{ form.photo_rounded.label }}</span></label>
+        </section>
+      </div>
+
+      <div class="control-panel" data-panel="model">
+        <section class="control-section">
+          <h2>Construção</h2>
+          <label>{{ form.model_mode.label }}{{ form.model_mode }}</label>
+          <label>{{ form.terrain_route_style.label }}{{ form.terrain_route_style }}</label>
+          <label>{{ form.width_mm.label }} <span class="unit-hint">mm</span>{{ form.width_mm }}</label>
+          <label>{{ form.base_thickness_mm.label }} <span class="unit-hint">mm</span>{{ form.base_thickness_mm }}</label>
+          <label>{{ form.route_width_mm.label }} <span class="unit-hint">mm</span>{{ form.route_width_mm }}</label>
+          <label>{{ form.route_height_mm.label }} <span class="unit-hint">mm</span>{{ form.route_height_mm }}</label>
+          <label>{{ form.terrain_height_mm.label }} <span class="unit-hint">mm</span>{{ form.terrain_height_mm }}</label>
+          <label>{{ form.inlay_clearance_mm.label }} <span class="unit-hint">mm/lado</span>{{ form.inlay_clearance_mm }}</label>
+        </section>
+      </div>
+    </aside>
+
+    <section class="preview-workspace" aria-label="Pré-visualização">
+      <div class="workspace-toolbar">
+        <div class="preview-modes" aria-label="Visualização"><span class="preview-mode is-active">Prévia montada</span></div>
+        <div class="zoom-control"><button type="button" data-zoom="out" aria-label="Reduzir zoom">−</button><span id="zoom-value">100%</span><button type="button" data-zoom="in" aria-label="Aumentar zoom">+</button></div>
+      </div>
+      <div class="canvas-stage" id="canvas-stage">
+        <div class="preview-frame" id="preview-frame">
+          {% if project.preview_file %}
+            <img id="preview-image" src="{% url 'studio:preview-image' project.id %}" alt="Pré-visualização montada de {{ project.name }}">
+          {% else %}
+            <div class="preview-loading"><span></span><p>Gerando composição</p></div>
+          {% endif %}
+        </div>
+        <div class="processing-overlay" id="processing-overlay" hidden><span class="spinner"></span><strong>Preparando arquivos</strong><small>PDF, imagem e modelos 3D</small></div>
+      </div>
+      <div class="workspace-footer"><span>A4 · 210 × 297 mm</span><span>Preview protegido · Saída 300 DPI</span></div>
+    </section>
+
+    <aside class="production-rail" aria-label="Produção e exportação">
+      <section class="production-heading">
+        <p class="eyebrow">ATIVIDADE</p>
+        <h2>{{ project.title }}</h2>
+        <p>{{ project.location|default:"Local não informado" }}</p>
+      </section>
+      <section class="metric-grid" id="metric-grid">
+        {% for metric in metrics %}<div class="metric-item"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong><small>{{ metric.unit }}</small></div>{% endfor %}
+      </section>
+      <section class="production-spec">
+        <div><span>Peça</span><strong>{{ form.width_mm.value|floatformat:0 }} mm</strong></div>
+        <div><span>Rota</span><strong>{{ form.terrain_route_style.value|title }}</strong></div>
+        <div><span>Fonte</span><strong>{% if project.dem_file %}DEM real{% else %}Base plana{% endif %}</strong></div>
+      </section>
+      <div class="action-stack">
+        <button class="button button-secondary" type="button" data-action="preview">Atualizar visualização</button>
+        <button class="button button-primary" type="button" data-action="export">Gerar pacote completo</button>
+      </div>
+      <div class="form-errors" id="form-errors" hidden></div>
+      <section class="downloads" id="downloads">
+        <div class="section-heading compact"><div><p class="eyebrow">ARQUIVOS</p><h2>Produção</h2></div></div>
+        {% for artifact in artifacts %}
+          <a class="download-row" href="{% url 'studio:download' project.id artifact.id %}"><span>{{ artifact.get_kind_display }}</span><small>{{ artifact.size_bytes|filesizeformat }}</small></a>
+        {% empty %}
+          <p class="empty-downloads">Os arquivos aparecerão aqui depois da primeira exportação.</p>
+        {% endfor %}
+      </section>
+      <details class="danger-zone"><summary>Gerenciar projeto</summary><form method="post" action="{% url 'studio:delete' project.id %}" onsubmit="return confirm('Excluir este projeto e todos os arquivos?')">{% csrf_token %}<button class="danger-button" type="submit">Excluir projeto</button></form></details>
+    </aside>
+  </form>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/js/editor.js' %}"></script>{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "studio/base.html" %}
+{% load static %}
+{% block title %}Projetos | GPX Print Studio{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+{% block content %}
+<main class="dashboard-shell">
+  <section class="dashboard-heading">
+    <div>
+      <p class="eyebrow">ATELIÊ DIGITAL</p>
+      <h1>Seus quadros de atividade</h1>
+      <p>Transforme um percurso real em uma peça impressa, pronta para produzir e montar.</p>
+    </div>
+    <span class="project-count">{{ projects|length }} projeto{{ projects|length|pluralize }}</span>
+  </section>
+
+  <section class="new-project-band" aria-labelledby="new-project-title">
+    <div class="new-project-copy">
+      <span class="step-index">01</span>
+      <div>
+        <h2 id="new-project-title">Começar pelo percurso</h2>
+        <p>Envie o GPX original. As métricas e a primeira composição serão criadas automaticamente.</p>
+      </div>
+    </div>
+    <form class="upload-form" method="post" action="{% url 'studio:create' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label class="compact-field">
+        <span>{{ create_form.name.label }}</span>
+        {{ create_form.name }}
+        {% for error in create_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </label>
+      <label class="dropzone" data-dropzone>
+        {{ create_form.gpx_file }}
+        <span class="dropzone-symbol">GPX</span>
+        <span><strong data-file-name>Selecionar percurso</strong><small>Arquivo .gpx, até 50 MB</small></span>
+      </label>
+      {% for error in create_form.gpx_file.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      <button class="button button-primary" type="submit">Criar composição</button>
+    </form>
+  </section>
+
+  <section class="project-library" aria-labelledby="project-library-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">BIBLIOTECA</p><h2 id="project-library-title">Projetos recentes</h2></div>
+    </div>
+    {% if projects %}
+      <div class="project-grid">
+        {% for project in projects %}
+          <a class="project-card" href="{% url 'studio:editor' project.id %}">
+            <div class="project-cover">
+              {% if project.preview_file %}
+                <img src="{% url 'studio:preview-image' project.id %}" alt="Preview de {{ project.name }}">
+              {% else %}
+                <div class="route-placeholder"><span></span></div>
+              {% endif %}
+              <span class="status status-{{ project.status }}">{{ project.get_status_display }}</span>
+            </div>
+            <div class="project-meta">
+              <div><h3>{{ project.name }}</h3><p>{{ project.location|default:project.source_filename }}</p></div>
+              <time datetime="{{ project.updated_at|date:'c' }}">{{ project.updated_at|date:"d M, H:i" }}</time>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-library">
+        <div class="empty-visual"><span></span></div>
+        <div><h3>O primeiro percurso começa acima</h3><p>Depois do upload, o editor abre com métricas, layout e modelo 3D sincronizados.</p></div>
+      </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/js/dashboard.js' %}"></script>{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "studio/base.html" %}
+{% block title %}Entrar | GPX Print Studio{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block content %}
+<main class="auth-shell"><section class="auth-panel"><p class="eyebrow">SUA CONTA</p><h1>Continuar criando</h1><p>Acesse seus projetos em qualquer sessão desta instalação.</p><form method="post">{% csrf_token %}{{ form.non_field_errors }}<label>Usuário{{ form.username }}</label><label>Senha{{ form.password }}</label><button class="button button-primary" type="submit">Entrar</button></form><small>Primeiro acesso? <a href="{% url 'signup' %}">Crie uma conta</a>.</small></section><div class="auth-visual"><span></span><strong>ROTAS REAIS<br>PEÇAS ÚNICAS</strong></div></main>
+{% endblock %}

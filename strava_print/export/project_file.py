@@ -10,7 +10,12 @@ from strava_print.domain.models import Model3DSettings, PhotoSettings, Project
 
 def save_project(path: str | Path, project: Project) -> Path:
     target = Path(path)
-    target.write_text(json.dumps(project.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
+    data = project.to_dict()
+    if data["photo"].get("path"):
+        data["photo"]["path"] = Path(data["photo"]["path"]).name
+    if data["model_3d"].get("dem_path"):
+        data["model_3d"]["dem_path"] = Path(data["model_3d"]["dem_path"]).name
+    target.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return target
 
 

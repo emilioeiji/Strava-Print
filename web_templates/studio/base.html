@@ -1,0 +1,38 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171b1d">
+  <title>{% block title %}GPX Print Studio{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'studio/css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="app-header">
+    <a class="brand" href="{% url 'studio:dashboard' %}" aria-label="GPX Print Studio">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span><strong>GPX PRINT</strong><small>STUDIO</small></span>
+    </a>
+    <nav class="header-nav" aria-label="Conta">
+      {% if user.is_authenticated %}
+        <span class="account-name">{{ user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="text-button" type="submit">Sair</button></form>
+      {% else %}
+        <a class="text-button" href="{% url 'login' %}">Entrar</a>
+        <a class="button button-secondary button-small" href="{% url 'signup' %}">Criar conta</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  {% if messages %}
+    <div class="messages" aria-live="polite">
+      {% for message in messages %}<div class="message message-{{ message.tags }}">{{ message }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

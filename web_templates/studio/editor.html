@@ -119,6 +119,7 @@
       <div class="action-stack">
         <button class="button button-secondary" type="button" data-action="preview">Atualizar visualização</button>
         <button class="button button-primary" type="button" data-action="export">Gerar pacote completo</button>
+        <a class="button button-purchase" href="{% url 'studio:checkout' project.id %}">Produzir este quadro</a>
       </div>
       <div class="form-errors" id="form-errors" hidden></div>
       <section class="downloads" id="downloads">

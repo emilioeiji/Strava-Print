@@ -33,6 +33,7 @@
   {% endif %}
 
   {% block content %}{% endblock %}
+  <footer class="site-footer"><span>GPX Print Studio</span><nav><a href="{% url 'studio:legal' 'termos' %}">Termos</a><a href="{% url 'studio:legal' 'privacidade' %}">Privacidade</a></nav></footer>
   {% block scripts %}{% endblock %}
 </body>
 </html>

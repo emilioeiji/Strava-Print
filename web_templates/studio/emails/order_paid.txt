@@ -1,0 +1,10 @@
+Olá {{ order.customer_name }},
+
+O pagamento do pedido {{ order.reference }} foi confirmado.
+
+Produto: {{ order.get_product_display }}
+Total: {{ total }}
+
+O pedido seguirá para produção e o status será atualizado no estúdio.
+
+GPX Print Studio

@@ -58,6 +58,21 @@ function updateDownloads(artifacts) {
   }).join("");
 }
 
+async function pollJob(url) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    const response = await fetch(url, {headers: {"X-Requested-With": "XMLHttpRequest"}});
+    const payload = await response.json();
+    saveState.textContent = `${payload.status} ${payload.progress || 0}%`;
+    if (payload.job_status === "complete") {
+      updateDownloads(payload.artifacts);
+      return payload;
+    }
+    if (payload.job_status === "failed") throw new Error(payload.error || "A exportação falhou.");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error("A exportação continua na fila. Consulte novamente em alguns minutos.");
+}
+
 async function submitAction(action) {
   overlay.hidden = false;
   errors.hidden = true;
@@ -78,7 +93,12 @@ async function submitAction(action) {
       previewImage.src = `${payload.preview_url}?v=${Date.now()}`;
       updateMetrics(payload.metrics);
     }
-    if (payload.artifacts) updateDownloads(payload.artifacts);
+    if (payload.job_url && payload.job_status !== "complete") {
+      const completed = await pollJob(payload.job_url);
+      payload.status = completed.status;
+    } else if (payload.artifacts) {
+      updateDownloads(payload.artifacts);
+    }
     saveState.textContent = payload.status || "SALVO";
   } catch (error) {
     showErrors({error: "Não foi possível concluir a operação. Verifique o servidor e tente novamente."});

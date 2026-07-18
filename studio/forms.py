@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
 from strava_print.layouts.templates import available_templates
 from strava_print.layouts.themes import MATERIALS, ROUTE_COLORS, THEMES
-from studio.models import PrintProject
+from studio.models import Order, PrintProject
 
 DEFAULT_METRICS = ["distance", "moving_time", "elevation_gain", "average_speed"]
 METRIC_CHOICES = [
@@ -271,3 +272,71 @@ class ProjectEditorForm(forms.Form):
                 setattr(project, field, data[field])
         project.save()
         return project
+
+
+class OrderForm(forms.ModelForm):
+    accept_terms = forms.BooleanField(
+        label="Li e aceito os termos de venda e a política de privacidade."
+    )
+
+    class Meta:
+        model = Order
+        fields = (
+            "product",
+            "quantity",
+            "customer_name",
+            "customer_email",
+            "customer_phone",
+            "postal_code",
+            "address_line1",
+            "address_line2",
+            "city",
+            "state",
+            "country",
+            "notes",
+            "payment_provider",
+        )
+        labels = {
+            "product": "Produto",
+            "quantity": "Quantidade",
+            "customer_name": "Nome completo",
+            "customer_email": "E-mail",
+            "customer_phone": "Telefone",
+            "postal_code": "Código postal",
+            "address_line1": "Endereço",
+            "address_line2": "Complemento",
+            "city": "Cidade",
+            "state": "Estado / província",
+            "country": "País",
+            "notes": "Observações",
+            "payment_provider": "Pagamento",
+        }
+        widgets = {
+            "product": forms.RadioSelect,
+            "quantity": forms.NumberInput(attrs={"min": 1, "max": 10}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        providers = [(Order.PaymentProvider.MANUAL, "Combinar pagamento")]
+        if settings.STRIPE_ENABLED:
+            providers.insert(0, (Order.PaymentProvider.STRIPE, "Cartão via Stripe"))
+        self.fields["payment_provider"].choices = providers
+        self.fields["quantity"].min_value = 1
+        self.fields["quantity"].max_value = 10
+        if not self.is_bound:
+            self.initial.setdefault("product", Order.Product.FRAMED)
+            self.initial.setdefault("quantity", 1)
+            self.initial.setdefault("country", "Japan")
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        product = cleaned.get("product")
+        if product and product != Order.Product.DIGITAL:
+            for field in ("postal_code", "address_line1", "city", "country"):
+                if not cleaned.get(field):
+                    self.add_error(field, "Campo obrigatório para produtos físicos.")
+        if cleaned.get("payment_provider") == Order.PaymentProvider.STRIPE and not settings.STRIPE_ENABLED:
+            self.add_error("payment_provider", "Pagamento Stripe ainda não está configurado.")
+        return cleaned

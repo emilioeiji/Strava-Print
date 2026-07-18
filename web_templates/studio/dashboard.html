@@ -68,6 +68,17 @@
       </div>
     {% endif %}
   </section>
+
+  {% if orders %}
+  <section class="order-library" aria-labelledby="order-library-title">
+    <div class="section-heading"><div><p class="eyebrow">PRODUÇÃO</p><h2 id="order-library-title">Pedidos recentes</h2></div></div>
+    <div class="order-table">
+      {% for order in orders %}
+        <a href="{% url 'studio:order' order.id %}"><strong>{{ order.reference }}</strong><span>{{ order.get_product_display }}</span><span>{{ order.customer_name }}</span><span class="order-status">{{ order.get_status_display }}</span><time>{{ order.created_at|date:"d M Y" }}</time></a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </main>
 {% endblock %}
 {% block scripts %}<script src="{% static 'studio/js/dashboard.js' %}"></script>{% endblock %}

@@ -17,6 +17,10 @@ Aplicação Django para transformar atividades GPX em quadros personalizados: ed
 - Dashboard Django responsivo, contas opcionais, projetos por sessão e downloads protegidos.
 - Editor comercial com preview montado, configurações de foto, DEM, rota e exportação.
 - Pacote ZIP com PDF, SVG, PNG, JPG, JSON e três arquivos STL.
+- Pedidos com preço calculado no servidor, entrega, status e histórico.
+- Pagamento manual funcional e Stripe Checkout opcional com webhook idempotente.
+- Fila de exportação persistente, worker Linux e acompanhamento pelo editor.
+- E-mails configuráveis e armazenamento privado local ou S3.
 - CLI independente, sem dependência obrigatória de mapas externos ou chaves de API.
 
 ## Instalação
@@ -115,6 +119,66 @@ gunicorn strava_print_web.wsgi:application --bind 0.0.0.0:8000 --timeout 300
 ```
 
 O `Dockerfile` oferece uma alternativa baseada em Python 3.12. Em produção, coloque Nginx ou outro proxy reverso na frente do Gunicorn, limite uploads também no proxy, mantenha `media/` fora do Git e faça backup do banco e dos arquivos enviados. A [documentação oficial do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) deve ser revisada antes de abrir o serviço ao público.
+
+### Docker Compose
+
+O Compose inicia PostgreSQL, aplicação e worker de exportações:
+
+```bash
+cp .env.example .env
+# Edite as chaves e senhas antes de continuar.
+docker compose up --build
+```
+
+Em `http://localhost:8000/health/`, a resposta `{"status":"ok"}` confirma que aplicação e banco estão acessíveis. O volume `media_data` guarda uploads e exportações; `postgres_data` guarda o banco.
+
+### Worker sem Docker
+
+Em produção, use dois processos. O web cria jobs e o worker os processa:
+
+```bash
+export EXPORT_JOBS_INLINE=0
+gunicorn strava_print_web.wsgi:application --bind 0.0.0.0:8000 --timeout 300
+python manage.py process_export_jobs
+```
+
+SQLite é adequado para desenvolvimento e um único worker. Use PostgreSQL quando houver concorrência.
+
+### Pagamentos Stripe
+
+Instale as dependências de produção e configure:
+
+```bash
+pip install -e ".[production]"
+export STRIPE_SECRET_KEY="sk_live_..."
+export STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+Cadastre no Stripe o endpoint `https://seu-dominio/integracoes/stripe/webhook/` para `checkout.session.completed`, `checkout.session.async_payment_succeeded` e `checkout.session.async_payment_failed`. O pedido só é marcado como pago pelo webhook assinado; o retorno do navegador não libera produção. Consulte a [documentação de fulfillment](https://docs.stripe.com/checkout/fulfillment).
+
+Sem Stripe, **Combinar pagamento** permanece disponível. Edite `MANUAL_PAYMENT_INSTRUCTIONS` com os dados e o processo real da empresa.
+
+### E-mail e S3
+
+Defina `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` e `DEFAULT_FROM_EMAIL`. Em desenvolvimento, os e-mails aparecem no terminal. Para armazenamento privado S3:
+
+```bash
+export AWS_STORAGE_BUCKET_NAME="seu-bucket-privado"
+export AWS_S3_REGION_NAME="ap-northeast-1"
+```
+
+Use uma credencial IAM de privilégio mínimo fornecida ao processo por role ou variáveis seguras; não coloque chaves no Git. Downloads continuam passando pelas views autorizadas.
+
+### Retenção e backup
+
+Simule e aplique a remoção de projetos sem pedidos após 90 dias:
+
+```bash
+python manage.py cleanup_projects --days 90 --dry-run
+python manage.py cleanup_projects --days 90
+```
+
+Faça backup diário do PostgreSQL e do storage. Projetos vinculados a pedidos são protegidos da limpeza automática.
 
 ## Estrutura
 

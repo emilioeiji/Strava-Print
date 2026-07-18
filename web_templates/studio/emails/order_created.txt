@@ -1,0 +1,12 @@
+Olá {{ order.customer_name }},
+
+Recebemos o pedido {{ order.reference }} para “{{ order.project.name }}”.
+
+Produto: {{ order.get_product_display }}
+Quantidade: {{ order.quantity }}
+Total: {{ total }}
+Status: {{ order.get_status_display }}
+
+Este e-mail confirma o recebimento. A produção começa após a confirmação do pagamento.
+
+GPX Print Studio

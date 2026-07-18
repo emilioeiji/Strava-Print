@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% block title %}Produzir {{ project.name }} | GPX Print Studio{% endblock %}
+{% block body_class %}commerce-page{% endblock %}
+{% block content %}
+<main class="checkout-shell">
+  <section class="checkout-heading"><a class="back-link" href="{% url 'studio:editor' project.id %}">← Voltar ao editor</a><p class="eyebrow">PRODUÇÃO</p><h1>Transformar em peça física</h1><p>Escolha o acabamento e confirme os dados. O valor é calculado novamente no servidor antes de criar o pedido.</p></section>
+  <form method="post" class="checkout-grid">{% csrf_token %}
+    <section class="checkout-form">
+      {{ form.non_field_errors }}
+      <fieldset class="product-selector"><legend>1. Produto</legend>
+        {% for product in products %}
+        <label><input type="radio" name="product" value="{{ product.value }}" {% if form.product.value == product.value %}checked{% endif %}><span><strong>{{ product.label }}</strong><small>{{ product.shipping }}</small></span><b>{{ product.price }}</b></label>
+        {% endfor %}
+        {% for error in form.product.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </fieldset>
+      <fieldset><legend>2. Contato</legend><div class="checkout-fields"><label>{{ form.customer_name.label }}{{ form.customer_name }}</label><label>{{ form.customer_email.label }}{{ form.customer_email }}</label><label>{{ form.customer_phone.label }}{{ form.customer_phone }}</label><label>{{ form.quantity.label }}{{ form.quantity }}</label></div></fieldset>
+      <fieldset><legend>3. Entrega</legend><div class="checkout-fields"><label>{{ form.postal_code.label }}{{ form.postal_code }}</label><label class="wide">{{ form.address_line1.label }}{{ form.address_line1 }}</label><label class="wide">{{ form.address_line2.label }}{{ form.address_line2 }}</label><label>{{ form.city.label }}{{ form.city }}</label><label>{{ form.state.label }}{{ form.state }}</label><label>{{ form.country.label }}{{ form.country }}</label></div></fieldset>
+      <fieldset><legend>4. Pagamento e observações</legend><div class="checkout-fields"><label>{{ form.payment_provider.label }}{{ form.payment_provider }}</label><label class="wide">{{ form.notes.label }}{{ form.notes }}</label></div></fieldset>
+      <label class="terms-check">{{ form.accept_terms }}<span>{{ form.accept_terms.label }}</span></label>
+      {% for field in form %}{% for error in field.errors %}{% if field.name != 'product' %}<small class="field-error">{{ field.label }}: {{ error }}</small>{% endif %}{% endfor %}{% endfor %}
+      <button class="button button-primary checkout-submit" type="submit">Confirmar pedido</button>
+    </section>
+    <aside class="checkout-summary"><div class="summary-preview">{% if project.preview_file %}<img src="{% url 'studio:preview-image' project.id %}" alt="Preview de {{ project.name }}">{% endif %}</div><p class="eyebrow">SEU PROJETO</p><h2>{{ project.name }}</h2><p>{{ project.location|default:project.source_filename }}</p><dl><div><dt>Impressão</dt><dd>Alta resolução</dd></div><div><dt>Peça 3D</dt><dd>{{ project.model3d_settings.width_mm|default:130 }} mm</dd></div><div><dt>Arquivos</dt><dd>Incluídos</dd></div></dl><small>O frete exibido é uma estimativa configurável. Confirme impostos, política de devolução e transportadora antes de abrir a loja ao público.</small></aside>
+  </form>
+</main>
+{% endblock %}

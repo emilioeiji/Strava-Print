@@ -1,0 +1,13 @@
+Olá {{ order.customer_name }},
+
+O pedido {{ order.reference }} foi atualizado.
+
+Status: {{ order.get_status_display }}
+Produto: {{ order.get_product_display }}
+Total: {{ total }}
+{% if order.tracking_number %}
+Transporte: {{ order.carrier }}
+Rastreio: {{ order.tracking_number }}
+{% endif %}
+
+Acesse o GPX Print Studio para acompanhar os detalhes.
